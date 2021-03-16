@@ -4,9 +4,7 @@ import functions as f
 
 def main():
     data = pd.read_csv("data.csv")
-                                        #data['artists']    -   artists
-                                        #data['name']       -   titles
-                                        #data['year']       -   realease year
-    artists = f.read_artists(data['artists'])    #list, that consists lists of strings, whcich are the authors of the song
+    data = data[['song_name','genre','tempo']]
+    print(data)
 if __name__ == '__main__':
     main()
