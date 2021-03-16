@@ -1,5 +1,8 @@
+import pandas as pd
+import numpy as np
+
 #file to store functions 
-def read_artists(pn_artists) -> list[list[str]]:         #function accepts list[str] and especially is designed to handle pandas.core.series.Seres() object
+def read_artists(pn_artists: pd.DataFrame) -> list[list[str]]:        #function accepts list[str] and especially is designed to handle pandas.core.series.Seres() object
     artists:list[list[str]] = []                        #every string is translated meaning:
     for x in pn_artists:                                #"'Artist'" , " 'Artists2'", " 'Artists3'"
         i=1                                             #is translated to be
