@@ -5,3 +5,7 @@
  -pandas
  -tensorflow
  -pip install -q tensorflow-recommenders
+ -pip install --upgrade tensorflow-datasets
+ -os
+ -pprint
+ -tempfile

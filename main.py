@@ -1,4 +1,6 @@
-import pandas as pd
+import os
+import pprint
+import tempfile
 import numpy as np
 import tensorflow as tf
 import tensorflow_recommenders as tfrs
@@ -8,7 +10,8 @@ from typing import Dict, Text
 import functions as f
 
 def main():
-    data = pd.read_csv("data.csv")
-    data = data[['song_name','genre','tempo','energy']]
+
+    return
+
 if __name__ == '__main__':
     main()
