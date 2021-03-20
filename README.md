@@ -3,3 +3,5 @@
  Using:
  -numpy
  -pandas
+ -tensorflow
+ -pip install -q tensorflow-recommenders
