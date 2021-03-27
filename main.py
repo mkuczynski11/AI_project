@@ -6,7 +6,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
 from functions import (top_movies_by_genre, top_movies_by_year,
-                       top_movies_general, weighted_rating)
+                       top_movies_general, weighted_rating, get_recommended_movies)
 
 
 def main():
@@ -46,23 +46,29 @@ def main():
     #----------------Raw data recommending----------------#
 
     #----------------Content description based----------------#
-    md_taglined = pd.read_csv("movies_metadata.csv")[["genres", "vote_count", "vote_average","release_date","title", "tagline", "overview"]]
+    md_taglined = pd.read_csv("movies_metadata.csv")[["genres", "vote_count", "vote_average", "release_date", "title", "tagline", "overview"]]
     md_taglined['tagline'] = md_taglined['tagline'].fillna('')
     md_taglined['description'] = md_taglined['tagline'] + md_taglined['overview']
     md_taglined['description'] = md_taglined['description'].fillna('')
     # print(md_taglined)
-    md_taglined = md_taglined.tail(5000) # trimming dataset so it can be proccessed on my device
+    md_taglined = md_taglined.head(5000) # trimming dataset so it can be proccessed on my device
+    md_taglined = md_taglined.reset_index()
 
     tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 2), min_df=0, stop_words='english')
     tfidf_values = tf.fit_transform(md_taglined['description'])
     # print(tfidf_values.shape)
 
     cosine_similarity = linear_kernel(tfidf_values, tfidf_values)
-    # print(cosine_similarity.shape)
+    # print(cosine_similarity)
 
+    movies = pd.Series(md_taglined.index, index=md_taglined['title'])
+    # print(movies)
 
+    titles = md_taglined['title']
+    print(titles)
 
-
+    recommended = get_recommended_movies(cosine_similarity, movies, titles, 'Toy Story')
+    print(recommended)
 
 
     #----------------Content description based----------------#

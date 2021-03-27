@@ -29,7 +29,6 @@ def weighted_rating(df:pd.DataFrame, m:float, C:float) -> float:
     R = df['vote_average']
     return (((v/(v+m)) * R) + ((m/(m+v)) * C))
 
-
 def top_movies_by_year(df: pd.DataFrame, top: float, year: int, below: bool) -> pd.DataFrame:
     top_movies = df
     
@@ -40,4 +39,12 @@ def top_movies_by_year(df: pd.DataFrame, top: float, year: int, below: bool) -> 
 
     return top_movies_general(top_movies, top)
 
-        
+def get_recommended_movies(cos_sim: np.ndarray, movies: pd.Series, titles:pd.Series, title: str) -> pd.DataFrame:
+    id = movies[title]
+
+    similiar_movies = np.asarray(list(enumerate(cos_sim[id])))
+    similiar_movies = similiar_movies[np.argsort(-1 * similiar_movies[:,1])]
+    similiar_movies = similiar_movies[:10:]
+    movie_slice = [x[0] for x in similiar_movies]
+    
+    return titles[movie_slice]
