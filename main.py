@@ -1,7 +1,13 @@
 from ast import literal_eval
-from functions import top_movies_general, top_movies_by_genre, weighted_rating, top_movies_by_year
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+
+from functions import (top_movies_by_genre, top_movies_by_year,
+                       top_movies_general, weighted_rating)
+
 
 def main():
     #----------------Data prep----------------#
@@ -35,13 +41,31 @@ def main():
     # top_by_genre = top_movies_by_genre(movies_data, 0.05, 'Romance')
     #print(top_by_genre)
 
-    top_by_year = top_movies_by_year(movies_data, 0.01, 2013, below=False)
-    print(top_by_year)
+    # top_by_year = top_movies_by_year(movies_data, 0.01, 2013, below=False)
+    # print(top_by_year)
     #----------------Raw data recommending----------------#
 
-    #----------------Content based----------------#
+    #----------------Content description based----------------#
+    md_taglined = pd.read_csv("movies_metadata.csv")[["genres", "vote_count", "vote_average","release_date","title", "tagline", "overview"]]
+    md_taglined['tagline'] = md_taglined['tagline'].fillna('')
+    md_taglined['description'] = md_taglined['tagline'] + md_taglined['overview']
+    md_taglined['description'] = md_taglined['description'].fillna('')
+    # print(md_taglined)
+    md_taglined = md_taglined.tail(5000) # trimming dataset so it can be proccessed on my device
 
-    #----------------Content based----------------#
+    tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 2), min_df=0, stop_words='english')
+    tfidf_values = tf.fit_transform(md_taglined['description'])
+    # print(tfidf_values.shape)
+
+    cosine_similarity = linear_kernel(tfidf_values, tfidf_values)
+    # print(cosine_similarity.shape)
+
+
+
+
+
+
+    #----------------Content description based----------------#
 
     #----------------Colaborative based----------------#
 
