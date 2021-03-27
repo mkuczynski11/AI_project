@@ -43,7 +43,7 @@ def top_movies_by_year(df: pd.DataFrame, top: float, year: int, below: bool) -> 
 def get_director(l:list) -> str:
     for x in l:
         if x['department'] == "Directing":
-            return [str.lower(x['name'].replace(" ","")) for i in range(3)]
+            return [str.lower(x['name'].replace(" ","")) for i in range(2)]
     return []
 
 def get_actors(l:list) -> list:
@@ -55,3 +55,17 @@ def discard_keywords(l:list, s:pd.Series) -> list:
         if i in s:
             keywords.append(i)
     return keywords
+
+def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame:
+    indices = pd.Series(df.index, index=df['title'])
+
+    idx = indices[title]
+    sim_scores = list(enumerate(cosine_sim[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:]
+    movie_indices = [i[0] for i in sim_scores]
+    return df.iloc[movie_indices]
+
+def get_popular_recomandation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray):
+    titles = get_recommendation(title, df, cosine_sim).head(100)
+    top_movies = top_movies_general(titles, 0.1)
+    return top_movies

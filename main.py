@@ -2,10 +2,12 @@ from ast import literal_eval
 
 from pandas.core.arrays.categorical import contains
 from pandas.io.formats.format import common_docstring
-from functions import discard_keywords, get_director, top_movies_general, top_movies_by_genre, weighted_rating, top_movies_by_year, get_actors
+from functions import discard_keywords, get_director, get_popular_recomandation, get_recommendation, top_movies_general, top_movies_by_genre, weighted_rating, top_movies_by_year, get_actors
 import pandas as pd
 import numpy as np
 from nltk.stem.snowball import SnowballStemmer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, _analyze
+from sklearn.metrics.pairwise import linear_kernel, cosine_similarity
 
 def main():
     #----------------Data prep----------------#
@@ -13,15 +15,15 @@ def main():
     csv_data = pd.read_csv("movies_metadata.csv")
     #select columns, that we are interested in
     movies_data = csv_data[["genres", "vote_count", "vote_average","release_date","title"]]
-    #print(movies_data)
+    # print(movies_data)
 
     #First we need to fix genres column in a way that it contains arrays of each genre name
     movies_data['genres'] = movies_data['genres'].fillna('[]').apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
-    #print(movies_data)
+    # print(movies_data)
 
     #Next step is to fix vote_count column and vote_average column
     movies_data['vote_count'] = movies_data['vote_count'].fillna(0).astype(int)
-    #print(movies_data['vote_count'])
+    # print(movies_data['vote_count'])
 
     # Changing release_data to year only
     movies_data = movies_data[movies_data['release_date'].notna()]
@@ -31,21 +33,21 @@ def main():
     # print(movies_data['release_date'])
     #----------------Data prep----------------#
 
-    #----------------Raw data recommending----------------#
+    #----------Raw data recommending----------#
     #First part is recommender based on raw movie ratings
     # top_general = top_movies_general(movies_data, 0.01)
-    #print(top_general)
+    # print(top_general)
 
     # top_by_genre = top_movies_by_genre(movies_data, 0.05, 'Romance')
-    #print(top_by_genre)
+    # print(top_by_genre)
 
     # top_by_year = top_movies_by_year(movies_data, 0.01, 2013, below=False)
     # print(top_by_year)
-    #----------------Raw data recommending----------------#
+    #----------Raw data recommending----------#
 
-    #----------------Content based----------------#
+    #--------------Content based--------------#
     #--------Data prep--------#
-    content_data = movies_data[['genres','release_date','title']].join(csv_data['id'])
+    content_data:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
     credits = pd.read_csv('credits.csv')
     keywords = pd.read_csv('keywords.csv')
     links = pd.read_csv('links.csv')
@@ -83,11 +85,22 @@ def main():
     content_data['soup'] = content_data['soup'].apply(lambda x: ' '.join(x))
     #--------Data prep--------#
 
-    #----------------Content based----------------#
+    #Content based Recommender#
+    count = CountVectorizer(analyzer="word", ngram_range=(1,2), min_df=0, stop_words="english")
+    count_matrix = count.fit_transform(content_data['soup'])
+    # print(count_matrix)
+    cosine_sim = cosine_similarity(count_matrix, count_matrix)
+    # print(get_recommendation('Toy Story', content_data, cosine_sim).head(15))
+    # print(get_popular_recomandation('Toy Story', content_data, cosine_sim))
 
-    #----------------Colaborative based----------------#
 
-    #----------------Colaborative based----------------#
+    #Content based Recommender#
+
+    #--------------Content based--------------#
+
+    #------------Colaborative based-----------#
+
+    #------------Colaborative based-----------#
     return
 
 if __name__ == '__main__':
