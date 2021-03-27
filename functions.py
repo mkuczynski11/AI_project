@@ -58,14 +58,13 @@ def discard_keywords(l:list, s:pd.Series) -> list:
 
 def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame:
     indices = pd.Series(df.index, index=df['title'])
-
     idx = indices[title]
     sim_scores = list(enumerate(cosine_sim[idx]))
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:]
     movie_indices = [i[0] for i in sim_scores]
     return df.iloc[movie_indices]
 
-def get_popular_recomandation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray):
+def get_popular_recomandation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame:
     titles = get_recommendation(title, df, cosine_sim).head(100)
     top_movies = top_movies_general(titles, 0.1)
     return top_movies

@@ -13,28 +13,66 @@ def main():
     #----------------Data prep----------------#
     #read csv
     csv_data = pd.read_csv("movies_metadata.csv")
-    #select columns, that we are interested in
+
+    #movie_data DataFrame columns selecting
     movies_data = csv_data[["genres", "vote_count", "vote_average","release_date","title"]]
-    # print(movies_data)
-
-    #First we need to fix genres column in a way that it contains arrays of each genre name
+    #movie_data genres column fixing
     movies_data['genres'] = movies_data['genres'].fillna('[]').apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
-    # print(movies_data)
-
-    #Next step is to fix vote_count column and vote_average column
+    #movie_data vote count column fixing
     movies_data['vote_count'] = movies_data['vote_count'].fillna(0).astype(int)
-    # print(movies_data['vote_count'])
-
-    # Changing release_data to year only
+    #movie_data release_date column fixing
     movies_data = movies_data[movies_data['release_date'].notna()]
     movies_data = movies_data.reset_index(drop=True)
     movies_data['release_date'] = movies_data['release_date'].apply(lambda date: date[:4:])
     movies_data['release_date'] = pd.to_numeric(movies_data['release_date'])
-    # print(movies_data['release_date'])
+
+    #credits DataFrame prep
+    credits = pd.read_csv('credits.csv')
+    credits['id'] = credits['id'].astype('int')
+
+    #keywords DataFrame prep
+    keywords = pd.read_csv('keywords.csv')
+    keywords['id'] = keywords['id'].astype('int')
+
+    #links DataFrame prep
+    links = pd.read_csv('links.csv')
+    links = links[links['tmdbId'].notnull()]['tmdbId'].astype('int')
+
+    #content_data DataFrame prep
+    content_data:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
+    content_data['id'] = content_data['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
+    
+    #Merging the data with keywords and credits
+    content_data = content_data.merge(keywords, on='id')
+    content_data = content_data.merge(credits, on='id')
+    #Discarding unwanted data
+    content_data = content_data[content_data['id'].isin(links)]
+    #Prep of the crew and cast
+    content_data['crew'] = content_data['crew'].apply(literal_eval).apply(lambda x: get_director(x) if isinstance(x, list) else [])
+    content_data['cast'] = content_data['cast'].apply(literal_eval).apply(lambda x: get_actors(x) if isinstance(x, list) else []) 
+    content_data['keywords'] = content_data['keywords'].apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
+
+    #Discarding unwanted keywords(with few occurences)
+    keywords_frequency = content_data.apply(lambda x: pd.Series(x['keywords']), axis=1).stack().reset_index(level=1, drop=True)
+    keywords_frequency.name = 'keyword'
+    keywords_frequency = keywords_frequency.value_counts()
+    keywords_frequency = keywords_frequency[keywords_frequency > 1]
+    
+    #Refactoring keywords with stemmer(converts various keywords into one)
+    stemmer = SnowballStemmer('english')
+    content_data['keywords'] = content_data['keywords'].apply(discard_keywords, args=(keywords_frequency,))
+    content_data['keywords'] = content_data['keywords'].apply(lambda x: [stemmer.stem(i) for i in x])
+    content_data['keywords'] = content_data['keywords'].apply(lambda x: [str.lower(i.replace(" ", "")) for i in x])
+
+    #Cosine similarity computing
+    content_data['soup'] = content_data['crew'] + content_data['cast'] + content_data['keywords'] + content_data['genres']
+    content_data['soup'] = content_data['soup'].apply(lambda x: ' '.join(x))
+    count = CountVectorizer(analyzer="word", ngram_range=(1,2), min_df=0, stop_words="english")
+    count_matrix = count.fit_transform(content_data['soup'])
+    cosine_sim = cosine_similarity(count_matrix, count_matrix)
     #----------------Data prep----------------#
 
     #----------Raw data recommending----------#
-    #First part is recommender based on raw movie ratings
     # top_general = top_movies_general(movies_data, 0.01)
     # print(top_general)
 
@@ -46,56 +84,10 @@ def main():
     #----------Raw data recommending----------#
 
     #--------------Content based--------------#
-    #--------Data prep--------#
-    content_data:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
-    credits = pd.read_csv('credits.csv')
-    keywords = pd.read_csv('keywords.csv')
-    links = pd.read_csv('links.csv')
-    links = links[links['tmdbId'].notnull()]['tmdbId'].astype('int')
-
-    #First we prep our ids in case to compare them and merge
-    keywords['id'] = keywords['id'].astype('int')
-    credits['id'] = credits['id'].astype('int')
-    content_data['id'] = content_data['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
-
-    #Merging the data
-    content_data = content_data.merge(keywords, on='id')
-    content_data = content_data.merge(credits, on='id')
-
-    #Discarding unwanted data
-    content_data = content_data[content_data['id'].isin(links)]
-
-    #Prep of the crew and cast
-    content_data['crew'] = content_data['crew'].apply(literal_eval).apply(lambda x: get_director(x) if isinstance(x, list) else [])
-    content_data['cast'] = content_data['cast'].apply(literal_eval).apply(lambda x: get_actors(x) if isinstance(x, list) else []) 
-    content_data['keywords'] = content_data['keywords'].apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
-    #print(content_data)
-
-    keywords_frequency = content_data.apply(lambda x: pd.Series(x['keywords']), axis=1).stack().reset_index(level=1, drop=True)
-    keywords_frequency.name = 'keyword'
-    keywords_frequency = keywords_frequency.value_counts()
-    keywords_frequency = keywords_frequency[keywords_frequency > 1]
-
-    stemmer = SnowballStemmer('english')
-    content_data['keywords'] = content_data['keywords'].apply(discard_keywords, args=(keywords_frequency,))
-    content_data['keywords'] = content_data['keywords'].apply(lambda x: [stemmer.stem(i) for i in x])
-    content_data['keywords'] = content_data['keywords'].apply(lambda x: [str.lower(i.replace(" ", "")) for i in x])
-
-    content_data['soup'] = content_data['crew'] + content_data['cast'] + content_data['keywords'] + content_data['genres']
-    content_data['soup'] = content_data['soup'].apply(lambda x: ' '.join(x))
-    #--------Data prep--------#
-
-    #Content based Recommender#
-    count = CountVectorizer(analyzer="word", ngram_range=(1,2), min_df=0, stop_words="english")
-    count_matrix = count.fit_transform(content_data['soup'])
-    # print(count_matrix)
-    cosine_sim = cosine_similarity(count_matrix, count_matrix)
-    # print(get_recommendation('Toy Story', content_data, cosine_sim).head(15))
-    # print(get_popular_recomandation('Toy Story', content_data, cosine_sim))
-
-
-    #Content based Recommender#
-
+    # content_recommend = get_recommendation('Toy Story', content_data, cosine_sim).head(15)
+    # print(content_recommend)
+    # popular_content_recommend = get_popular_recomandation('Toy Story', content_data, cosine_sim)
+    # print(popular_content_recommend)
     #--------------Content based--------------#
 
     #------------Colaborative based-----------#
