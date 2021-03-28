@@ -29,7 +29,11 @@ def weighted_rating(df:pd.DataFrame, m:float, C:float) -> float:
     R = df['vote_average']
     return (((v/(v+m)) * R) + ((m/(m+v)) * C))
 
-
+#returns top movies with specified genre based only on user votes
+#x - DataFrame to analyze
+#top - float value from 0 to 1 that determines percentage of top movies in terms of votes casted
+#year - year for all movies to be compared with
+#below - if other movies year values should be below the year argument
 def top_movies_by_year(df: pd.DataFrame, top: float, year: int, below: bool) -> pd.DataFrame:
     top_movies = df
     
@@ -40,15 +44,22 @@ def top_movies_by_year(df: pd.DataFrame, top: float, year: int, below: bool) -> 
 
     return top_movies_general(top_movies, top)
 
+#returns [director, director] from crew members list
+#l - crew members list
 def get_director(l:list) -> str:
     for x in l:
         if x['department'] == "Directing":
             return [str.lower(x['name'].replace(" ","")) for i in range(2)]
     return []
 
+#returns 0:3 actors from cast members list
+#l - cast members list
 def get_actors(l:list) -> list:
     return [str.lower(l[i]['name'].replace(" ", "")) for i in range(3)] if len(l) > 3 else [str.lower(x['name'].replace(" ", "")) for x in l]
 
+#returns valid keywords(more appearences than 1)
+#l - list of keywords
+#s - list of valid keywords
 def discard_keywords(l:list, s:pd.Series) -> list:
     keywords = []
     for i in l:
@@ -56,6 +67,10 @@ def discard_keywords(l:list, s:pd.Series) -> list:
             keywords.append(i)
     return keywords
 
+#returns recommendation for a certain movie based on the movies parameters
+#title - movie title to check similarity
+#df - movies dataframe
+#cosine_sim - computed already cosine similarity matrix
 def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame:
     indices = pd.Series(df.index, index=df['title'])
     idx = indices[title]
@@ -64,6 +79,10 @@ def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.
     movie_indices = [i[0] for i in sim_scores]
     return df.iloc[movie_indices]
 
+#returns recommendation for a certain movie based on the movies parameters and then sorts them by Weightened Rating
+#title - movie title to check similarity
+#df - movies dataframe
+#cosine_sim - computed already cosine similarity matrix
 def get_popular_recomandation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame:
     titles = get_recommendation(title, df, cosine_sim).head(100)
     top_movies = top_movies_general(titles, 0.1)
