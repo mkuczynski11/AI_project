@@ -8,7 +8,7 @@
   1.`pip install pandas`\
   2.`pip install numpy`\
   3.`pip install ntlk`\
-  4.`pip install -U scikit-learn`\
+  4.`pip install -U scikit-learn`
  ### Python
   We recommend using `python 3.9.2` version, as we created this repository using this version
 ## Usage
