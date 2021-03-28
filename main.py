@@ -9,11 +9,15 @@ from nltk.stem.snowball import SnowballStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, _analyze
 from sklearn.metrics.pairwise import linear_kernel, cosine_similarity
 
+pd.options.mode.chained_assignment = None  # default='warn' <- disabling warning message
+
 def main():
     #----------------Data prep----------------#
+    print("Recommender: reading csv")
     #read csv
-    csv_data = pd.read_csv("movies_metadata.csv")
+    csv_data = pd.read_csv("movies_metadata.csv", low_memory=False)
 
+    print("Recommender: movies_data preping")
     #movie_data DataFrame columns selecting
     movies_data = csv_data[["genres", "vote_count", "vote_average","release_date","title"]]
     #movie_data genres column fixing
@@ -26,44 +30,54 @@ def main():
     movies_data['release_date'] = movies_data['release_date'].apply(lambda date: date[:4:])
     movies_data['release_date'] = pd.to_numeric(movies_data['release_date'])
 
+    print("Recommender: credits preping")
     #credits DataFrame prep
     credits = pd.read_csv('credits.csv')
     credits['id'] = credits['id'].astype('int')
 
+    print("Recommender: keywords preping")
     #keywords DataFrame prep
     keywords = pd.read_csv('keywords.csv')
     keywords['id'] = keywords['id'].astype('int')
 
+    print("Recommender: links preping")
     #links DataFrame prep
     links = pd.read_csv('links.csv')
     links = links[links['tmdbId'].notnull()]['tmdbId'].astype('int')
 
+    print("Recommender: content_data preping")
     #content_data DataFrame prep
     content_data:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
     content_data['id'] = content_data['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
     
+    print("Recommender: content_data merging")
     #Merging the data with keywords and credits
     content_data = content_data.merge(keywords, on='id')
     content_data = content_data.merge(credits, on='id')
     #Discarding unwanted data
     content_data = content_data[content_data['id'].isin(links)]
+
+    print("Recommender: content_data refactoring")
     #Prep of the crew and cast
     content_data['crew'] = content_data['crew'].apply(literal_eval).apply(lambda x: get_director(x) if isinstance(x, list) else [])
     content_data['cast'] = content_data['cast'].apply(literal_eval).apply(lambda x: get_actors(x) if isinstance(x, list) else []) 
     content_data['keywords'] = content_data['keywords'].apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
 
+    print("Recommender: keywords discarding")
     #Discarding unwanted keywords(with few occurences)
-    keywords_frequency = content_data.apply(lambda x: pd.Series(x['keywords']), axis=1).stack().reset_index(level=1, drop=True)
+    keywords_frequency:object = content_data.apply(lambda x: pd.Series(x['keywords'], dtype="object"), axis=1).stack().reset_index(level=1, drop=True)
     keywords_frequency.name = 'keyword'
     keywords_frequency = keywords_frequency.value_counts()
     keywords_frequency = keywords_frequency[keywords_frequency > 1]
     
+    print("Recommender: keywords refactoring")
     #Refactoring keywords with stemmer(converts various keywords into one)
     stemmer = SnowballStemmer('english')
     content_data['keywords'] = content_data['keywords'].apply(discard_keywords, args=(keywords_frequency,))
     content_data['keywords'] = content_data['keywords'].apply(lambda x: [stemmer.stem(i) for i in x])
     content_data['keywords'] = content_data['keywords'].apply(lambda x: [str.lower(i.replace(" ", "")) for i in x])
 
+    print("Recommender: cosine similarity computing")
     #Cosine similarity computing
     content_data['soup'] = content_data['crew'] + content_data['cast'] + content_data['keywords'] + content_data['genres']
     content_data['soup'] = content_data['soup'].apply(lambda x: ' '.join(x))
@@ -86,8 +100,9 @@ def main():
     #--------------Content based--------------#
     # content_recommend = get_recommendation('Toy Story', content_data, cosine_sim).head(15)
     # print(content_recommend)
-    # popular_content_recommend = get_popular_recomandation('Toy Story', content_data, cosine_sim)
-    # print(popular_content_recommend)
+    print("Recommender: popular_content_recommending preping")
+    popular_content_recommend = get_popular_recomandation('The Wolf of Wall Street', content_data, cosine_sim)
+    print(popular_content_recommend)
     #--------------Content based--------------#
 
     #------------Colaborative based-----------#
