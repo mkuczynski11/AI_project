@@ -1,5 +1,4 @@
 # AI_project
-## Description
  This repository devoted to Artificial Intelligence project durign 4th semester at University of Technology in Gdańsk.  
  The purpose of this project is to create movie recommending system.
 ## Requirements
@@ -11,7 +10,7 @@
   4.`pip install -U scikit-learn`
  ### Python
   We recommend using `python 3.9.2` version, as we created this repository using this version
-## Usage
+## Description
 ## CSV links
  * [movies_metadata.csv]https://www.kaggle.com/rounakbanik/the-movies-dataset?select=movies_metadata.csv
  * [ratings.csv]https://www.kaggle.com/rounakbanik/the-movies-dataset?select=ratings.csv
