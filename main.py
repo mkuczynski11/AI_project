@@ -1,7 +1,5 @@
 from ast import literal_eval
 
-from pandas.core.arrays.categorical import contains
-from pandas.io.formats.format import common_docstring
 from functions import discard_keywords, get_director, get_popular_recomandation, get_recommendation, top_movies_general, top_movies_by_genre, weighted_rating, top_movies_by_year, get_actors
 import pandas as pd
 import numpy as np
