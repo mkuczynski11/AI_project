@@ -71,7 +71,7 @@ def discard_keywords(l:list, s:pd.Series) -> list:
 #title - movie title to check similarity
 #df - movies dataframe
 #cosine_sim - computed already cosine similarity matrix
-def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame:
+def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame: # to merge
     indices = pd.Series(df.index, index=df['title'])
     idx = indices[title]
     sim_scores = list(enumerate(cosine_sim[idx]))
@@ -83,7 +83,37 @@ def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.
 #title - movie title to check similarity
 #df - movies dataframe
 #cosine_sim - computed already cosine similarity matrix
-def get_popular_recomandation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame:
+def get_popular_recomandation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame: # to merge
     titles = get_recommendation(title, df, cosine_sim).head(100)
     top_movies = top_movies_general(titles, 0.1)
     return top_movies
+
+# Returns DataFrame containing 100 most similiar movies, ordered by their rating
+def get_recommended_movies(cos_sim: np.ndarray, titles: pd.DataFrame, df:pd.Series, title: str) -> pd.DataFrame: # to merge
+    id = titles[title]
+
+    similiar_movies = np.asarray(list(enumerate(cos_sim[id])))
+    similiar_movies = similiar_movies[np.argsort(-1 * similiar_movies[:,1])]
+    similiar_movies = similiar_movies[:101:]
+    movie_slice = [x[0] for x in similiar_movies]
+
+    recommended = df.iloc[movie_slice]
+
+    top_recommended = top_movies_general(recommended, 0.1)
+
+    return top_recommended
+
+# Displays top recommended movies in a pleasant way
+def view_recommended_movies(recommended: pd.DataFrame) -> None:
+    print('=' * 60)
+    print(f"Top recommended movies for {recommended.values[0][5]}:")
+    for i in range(1, len(recommended.values)):
+        print(f'{i}. {recommended.values[i][5]}')
+
+    print('=' * 60)
+
+def save_to_file(df: pd.DataFrame, overwrite=True) -> None:
+    pass
+
+def load_from_file(file_name: str) -> pd.DataFrame:
+    pass

@@ -1,13 +1,19 @@
 from ast import literal_eval
 
-from functions import discard_keywords, get_director, get_popular_recomandation, get_recommendation, top_movies_general, top_movies_by_genre, weighted_rating, top_movies_by_year, get_actors
-import pandas as pd
 import numpy as np
+import pandas as pd
 from nltk.stem.snowball import SnowballStemmer
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, _analyze
-from sklearn.metrics.pairwise import linear_kernel, cosine_similarity
+from sklearn.feature_extraction.text import (CountVectorizer, TfidfVectorizer,
+                                             _analyze)
+from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
 
 pd.options.mode.chained_assignment = None  # default='warn' <- disabling warning message
+
+from functions import (get_recommended_movies, top_movies_by_genre,
+                       top_movies_by_year, top_movies_general,
+                       view_recommended_movies, weighted_rating,
+                       discard_keywords, get_director, get_recommendation,
+                       get_popular_recomandation, get_actors)
 
 def main():
     #----------------Data prep----------------#
@@ -89,19 +95,53 @@ def main():
     # print(top_general)
 
     # top_by_genre = top_movies_by_genre(movies_data, 0.05, 'Romance')
-    # print(top_by_genre)
+    #print(top_by_genre)
 
     # top_by_year = top_movies_by_year(movies_data, 0.01, 2013, below=False)
     # print(top_by_year)
-    #----------Raw data recommending----------#
+    #----------------Raw data recommending----------------#
 
-    #--------------Content based--------------#
+    #----------------Content description based----------------#
+    # Geting new DataFrame with specific columns and creating additional column
+    # with tagline and overview combined
+    movies_df = pd.read_csv("movies_metadata.csv", low_memory=False)[["genres", "vote_count", "vote_average", "release_date", "title", "tagline", "overview"]]
+    movies_df['tagline'] = movies_df['tagline'].fillna('')
+    movies_df['description'] = movies_df['tagline'] + movies_df['overview']
+    movies_df['description'] = movies_df['description'].fillna('')
+    # print("DataFrame with description column:")
+    # print(md_taglined)
+    movies_df = movies_df.reset_index()
+
+    # Creating tf-idf statistics
+    tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 3), min_df=0, stop_words='english')
+    tfidf_values = tf.fit_transform(movies_df['description'])
+    # print(tfidf_values.shape)
+
+    cosine_simil = linear_kernel(tfidf_values, tfidf_values)
+    # print(cosine_similarity)
+
+    titles = pd.Series(movies_df.index, index=movies_df['title'], name="titles")
+    # print(movies)
+
+    # titles = md_taglined['title']
+    # print(titles)
+
+    recommended = get_recommended_movies(cosine_simil, titles, movies_df, 'Toy Story')
+    view_recommended_movies(recommended)
+    #----------------Content description based----------------#
+
+
+    #----------------Content soup based----------------#
+
     # content_recommend = get_recommendation('Toy Story', content_data, cosine_sim).head(15)
     # print(content_recommend)
     print("Recommender: popular_content_recommending preping")
     popular_content_recommend = get_popular_recomandation('The Wolf of Wall Street', content_data, cosine_sim)
     print(popular_content_recommend)
-    #--------------Content based--------------#
+
+    #----------------Content soup based----------------#
+
+
 
     #------------Colaborative based-----------#
 
