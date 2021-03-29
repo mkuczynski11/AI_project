@@ -114,8 +114,29 @@ def view_recommended_movies(recommended: pd.DataFrame) -> None:     #to change
 
     print('=' * 60)
 
-def save_to_file(df: pd.DataFrame, overwrite=True) -> None:
-    pass
+def save_to_file(df: pd.DataFrame, file_name:str, overwrite: bool=True) -> None:
+    exists = exists_file(file_name)
+
+    if not exists or overwrite:
+        df.to_csv(file_name, encoding='utf-8', index=False)
 
 def load_from_file(file_name: str) -> pd.DataFrame:
-    pass
+    df = None
+
+    if exists_file(file_name):
+        df = pd.read_csv(file_name)
+
+    return df
+
+def exists_file(file_name: str) -> bool:
+        exists = False
+
+        try:
+            f = open(file_name)
+            exists = True
+        except IOError:
+            pass
+        finally:
+            f.close()
+
+        return exists
