@@ -92,7 +92,7 @@ def main():
     print("Recommender: description prep")
     # Geting new DataFrame with specific columns and creating additional column
     # with tagline and overview combined
-    content_data_desc = movies_data.join(csv_data[["tagline", "overview"]])
+    content_data_desc = csv_data[['genres','release_date','title', 'vote_count', 'vote_average', 'overview', 'tagline']]
     content_data_desc['tagline'] = content_data_desc['tagline'].fillna('')
     content_data_desc['description'] = content_data_desc['tagline'] + content_data_desc['overview']
     content_data_desc['description'] = content_data_desc['description'].fillna('')
@@ -122,7 +122,7 @@ def main():
     #----------------Content description based----------------#
     movie = 'Toy Story'
     print("Recommender: recommending description based for " + movie)
-    recommended = get_recommended_movies(cosine_sim_desc, titles, content_data_desc, movie)
+    recommended = get_popular_recomandation(movie, content_data_desc, cosine_sim_desc)
     view_recommended_movies(recommended)
     #----------------Content description based----------------#
 
@@ -130,16 +130,16 @@ def main():
     #----------------Content soup based----------------#
     print("Recommender: content_recommending preping for " + movie)
     content_recommend = get_recommendation(movie, content_data_soup, cosine_sim_soup).head(15)
-    print(content_recommend)
+    view_recommended_movies(content_recommend)
     print("Recommender: popular_content_recommending preping for " + movie)
     popular_content_recommend = get_popular_recomandation(movie, content_data_soup, cosine_sim_soup)
-    print(popular_content_recommend)
+    view_recommended_movies(popular_content_recommend)
     #----------------Content soup based----------------#
 
 
 
     #------------Colaborative based-----------#
-
+    
     #------------Colaborative based-----------#
     return
 
