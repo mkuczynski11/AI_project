@@ -104,11 +104,13 @@ def get_recommended_movies(cos_sim: np.ndarray, titles: pd.DataFrame, df:pd.Seri
     return top_recommended
 
 # Displays top recommended movies in a pleasant way
-def view_recommended_movies(recommended: pd.DataFrame) -> None:
+def view_recommended_movies(recommended: pd.DataFrame) -> None:     #to change 
     print('=' * 60)
-    print(f"Top recommended movies for {recommended.values[0][5]}:")
-    for i in range(1, len(recommended.values)):
-        print(f'{i}. {recommended.values[i][5]}')
+    print(f"Top recommended movies for {recommended['title'][0]}:")
+    i = 1
+    for x in recommended['title'].values.tolist():
+        print(f'{i}. {x}')
+        i+=1
 
     print('=' * 60)
 

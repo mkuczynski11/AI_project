@@ -33,7 +33,7 @@ def main():
     movies_data = movies_data.reset_index(drop=True)
     movies_data['release_date'] = movies_data['release_date'].apply(lambda date: date[:4:])
     movies_data['release_date'] = pd.to_numeric(movies_data['release_date'])
-
+    
     print("Recommender: credits preping")
     #credits DataFrame prep
     credits = pd.read_csv('credits.csv')
@@ -51,25 +51,25 @@ def main():
 
     print("Recommender: content_data preping")
     #content_data DataFrame prep
-    content_data:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
-    content_data['id'] = content_data['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
+    content_data_soup:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
+    content_data_soup['id'] = content_data_soup['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
     
     print("Recommender: content_data merging")
     #Merging the data with keywords and credits
-    content_data = content_data.merge(keywords, on='id')
-    content_data = content_data.merge(credits, on='id')
+    content_data_soup = content_data_soup.merge(keywords, on='id')
+    content_data_soup = content_data_soup.merge(credits, on='id')
     #Discarding unwanted data
-    content_data = content_data[content_data['id'].isin(links)]
+    content_data_soup = content_data_soup[content_data_soup['id'].isin(links)]
 
     print("Recommender: content_data refactoring")
     #Prep of the crew and cast
-    content_data['crew'] = content_data['crew'].apply(literal_eval).apply(lambda x: get_director(x) if isinstance(x, list) else [])
-    content_data['cast'] = content_data['cast'].apply(literal_eval).apply(lambda x: get_actors(x) if isinstance(x, list) else []) 
-    content_data['keywords'] = content_data['keywords'].apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
+    content_data_soup['crew'] = content_data_soup['crew'].apply(literal_eval).apply(lambda x: get_director(x) if isinstance(x, list) else [])
+    content_data_soup['cast'] = content_data_soup['cast'].apply(literal_eval).apply(lambda x: get_actors(x) if isinstance(x, list) else []) 
+    content_data_soup['keywords'] = content_data_soup['keywords'].apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
 
     print("Recommender: keywords discarding")
     #Discarding unwanted keywords(with few occurences)
-    keywords_frequency:object = content_data.apply(lambda x: pd.Series(x['keywords'], dtype="object"), axis=1).stack().reset_index(level=1, drop=True)
+    keywords_frequency:object = content_data_soup.apply(lambda x: pd.Series(x['keywords'], dtype="object"), axis=1).stack().reset_index(level=1, drop=True)
     keywords_frequency.name = 'keyword'
     keywords_frequency = keywords_frequency.value_counts()
     keywords_frequency = keywords_frequency[keywords_frequency > 1]
@@ -77,17 +77,35 @@ def main():
     print("Recommender: keywords refactoring")
     #Refactoring keywords with stemmer(converts various keywords into one)
     stemmer = SnowballStemmer('english')
-    content_data['keywords'] = content_data['keywords'].apply(discard_keywords, args=(keywords_frequency,))
-    content_data['keywords'] = content_data['keywords'].apply(lambda x: [stemmer.stem(i) for i in x])
-    content_data['keywords'] = content_data['keywords'].apply(lambda x: [str.lower(i.replace(" ", "")) for i in x])
+    content_data_soup['keywords'] = content_data_soup['keywords'].apply(discard_keywords, args=(keywords_frequency,))
+    content_data_soup['keywords'] = content_data_soup['keywords'].apply(lambda x: [stemmer.stem(i) for i in x])
+    content_data_soup['keywords'] = content_data_soup['keywords'].apply(lambda x: [str.lower(i.replace(" ", "")) for i in x])
 
-    print("Recommender: cosine similarity computing")
+    print("Recommender: cosine similarity computing(soup)")
     #Cosine similarity computing
-    content_data['soup'] = content_data['crew'] + content_data['cast'] + content_data['keywords'] + content_data['genres']
-    content_data['soup'] = content_data['soup'].apply(lambda x: ' '.join(x))
+    content_data_soup['soup'] = content_data_soup['crew'] + content_data_soup['cast'] + content_data_soup['keywords'] + content_data_soup['genres']
+    content_data_soup['soup'] = content_data_soup['soup'].apply(lambda x: ' '.join(x))
     count = CountVectorizer(analyzer="word", ngram_range=(1,2), min_df=0, stop_words="english")
-    count_matrix = count.fit_transform(content_data['soup'])
-    cosine_sim = cosine_similarity(count_matrix, count_matrix)
+    count_matrix = count.fit_transform(content_data_soup['soup'])
+    cosine_sim_soup = cosine_similarity(count_matrix, count_matrix)
+
+    print("Recommender: description prep")
+    # Geting new DataFrame with specific columns and creating additional column
+    # with tagline and overview combined
+    content_data_desc = movies_data.join(csv_data[["tagline", "overview"]])
+    content_data_desc['tagline'] = content_data_desc['tagline'].fillna('')
+    content_data_desc['description'] = content_data_desc['tagline'] + content_data_desc['overview']
+    content_data_desc['description'] = content_data_desc['description'].fillna('')
+    content_data_desc = content_data_desc.reset_index()
+
+    print("Recommender: cosine similarity computing(desc)")
+    # Creating tf-idf statistics
+    tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 3), min_df=0, stop_words='english')
+    tfidf_values = tf.fit_transform(content_data_desc['description'])
+
+    cosine_sim_desc = linear_kernel(tfidf_values, tfidf_values)
+
+    titles = pd.Series(content_data_desc.index, index=content_data_desc['title'], name="titles")
     #----------------Data prep----------------#
 
     #----------Raw data recommending----------#
@@ -102,43 +120,20 @@ def main():
     #----------------Raw data recommending----------------#
 
     #----------------Content description based----------------#
-    # Geting new DataFrame with specific columns and creating additional column
-    # with tagline and overview combined
-    movies_df = pd.read_csv("movies_metadata.csv", low_memory=False)[["genres", "vote_count", "vote_average", "release_date", "title", "tagline", "overview"]]
-    movies_df['tagline'] = movies_df['tagline'].fillna('')
-    movies_df['description'] = movies_df['tagline'] + movies_df['overview']
-    movies_df['description'] = movies_df['description'].fillna('')
-    # print("DataFrame with description column:")
-    # print(md_taglined)
-    movies_df = movies_df.reset_index()
-
-    # Creating tf-idf statistics
-    tf = TfidfVectorizer(analyzer='word', ngram_range=(1, 3), min_df=0, stop_words='english')
-    tfidf_values = tf.fit_transform(movies_df['description'])
-    # print(tfidf_values.shape)
-
-    cosine_simil = linear_kernel(tfidf_values, tfidf_values)
-    # print(cosine_similarity)
-
-    titles = pd.Series(movies_df.index, index=movies_df['title'], name="titles")
-    # print(movies)
-
-    # titles = md_taglined['title']
-    # print(titles)
-
-    recommended = get_recommended_movies(cosine_simil, titles, movies_df, 'Toy Story')
+    movie = 'Toy Story'
+    print("Recommender: recommending description based for " + movie)
+    recommended = get_recommended_movies(cosine_sim_desc, titles, content_data_desc, movie)
     view_recommended_movies(recommended)
     #----------------Content description based----------------#
 
 
     #----------------Content soup based----------------#
-
-    # content_recommend = get_recommendation('Toy Story', content_data, cosine_sim).head(15)
-    # print(content_recommend)
-    print("Recommender: popular_content_recommending preping")
-    popular_content_recommend = get_popular_recomandation('The Wolf of Wall Street', content_data, cosine_sim)
+    print("Recommender: content_recommending preping for " + movie)
+    content_recommend = get_recommendation(movie, content_data_soup, cosine_sim_soup).head(15)
+    print(content_recommend)
+    print("Recommender: popular_content_recommending preping for " + movie)
+    popular_content_recommend = get_popular_recomandation(movie, content_data_soup, cosine_sim_soup)
     print(popular_content_recommend)
-
     #----------------Content soup based----------------#
 
 
