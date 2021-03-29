@@ -4,9 +4,9 @@
 ## Requirements
  There are several requirements:
  ### Imports
-  * `pip install pandas`\
-  * `pip install numpy`\
-  * `pip install ntlk`\
+  * `pip install pandas`
+  * `pip install numpy`
+  * `pip install ntlk`
   * `pip install -U scikit-learn`
  ### Python
   We recommend using `python 3.9.2` version, as we created this repository using this version
