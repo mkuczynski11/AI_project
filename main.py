@@ -3,13 +3,15 @@ from ast import literal_eval
 import numpy as np
 import pandas as pd
 from nltk.stem.snowball import SnowballStemmer
-from sklearn.feature_extraction.text import (CountVectorizer, TfidfVectorizer,
-                                             _analyze)
+from pandas.io.parsers import read_csv
+from sklearn.feature_extraction.text import (CountVectorizer, TfidfVectorizer,)
 from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
+from surprise import Reader, Dataset, SVD
+from surprise.model_selection import cross_validate
 
 pd.options.mode.chained_assignment = None  # default='warn' <- disabling warning message
 
-from functions import (get_recommended_movies, top_movies_by_genre,
+from functions import (get_recommended_movies, hybrid_recommendation, top_movies_by_genre,
                        top_movies_by_year, top_movies_general,
                        view_recommended_movies, weighted_rating,
                        discard_keywords, get_director, get_recommendation,
@@ -47,11 +49,13 @@ def main():
     print("Recommender: links preping")
     #links DataFrame prep
     links = pd.read_csv('links.csv')
-    links = links[links['tmdbId'].notnull()]['tmdbId'].astype('int')
+    links['tmdbId'] = links[links['tmdbId'].notnull()]['tmdbId'].astype('int')
 
     print("Recommender: content_data preping")
     #content_data DataFrame prep
-    content_data_soup:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
+    # content_data_soup:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
+    content_data_soup:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']]
+    content_data_soup['id'] = csv_data['id']
     content_data_soup['id'] = content_data_soup['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
     
     print("Recommender: content_data merging")
@@ -59,7 +63,7 @@ def main():
     content_data_soup = content_data_soup.merge(keywords, on='id')
     content_data_soup = content_data_soup.merge(credits, on='id')
     #Discarding unwanted data
-    content_data_soup = content_data_soup[content_data_soup['id'].isin(links)]
+    content_data_soup = content_data_soup[content_data_soup['id'].isin(links['tmdbId'])]
 
     print("Recommender: content_data refactoring")
     #Prep of the crew and cast
@@ -120,27 +124,42 @@ def main():
     #----------------Raw data recommending----------------#
 
     #----------------Content description based----------------#
-    movie = 'Toy Story'
+    movie = 'Avatar'
     print("Recommender: recommending description based for " + movie)
     recommended = get_popular_recomandation(movie, content_data_desc, cosine_sim_desc)
     view_recommended_movies(recommended)
     #----------------Content description based----------------#
 
 
-    #----------------Content soup based----------------#
+    #--------------------Content soup based-------------------#
     print("Recommender: content_recommending preping for " + movie)
     content_recommend = get_recommendation(movie, content_data_soup, cosine_sim_soup).head(15)
     view_recommended_movies(content_recommend)
     print("Recommender: popular_content_recommending preping for " + movie)
     popular_content_recommend = get_popular_recomandation(movie, content_data_soup, cosine_sim_soup)
     view_recommended_movies(popular_content_recommend)
-    #----------------Content soup based----------------#
+    #--------------------Content soup based-------------------#
 
 
 
     #------------Colaborative based-----------#
-    
+    reader = Reader()
+    ratings = read_csv("ratings_small.csv")
+    data = Dataset.load_from_df(ratings[['userId', 'movieId', 'rating']], reader)
+    svd = SVD()
+    print("Recommender: evaluating 'RMSE' and 'MAE' measures for SVD")
+    cross_validate(svd, data, measures=['RMSE', 'MAE'], cv=5)
+    trainset = data.build_full_trainset()
+    svd.fit(trainset)
     #------------Colaborative based-----------#
+
+    #------------Hybrid recommender-----------#
+    print("Recommender: Hybrid recommendation for " + movie)
+    hybrid_result = hybrid_recommendation(movie, 1, content_data_soup, cosine_sim_soup, svd, links)
+    view_recommended_movies(hybrid_result)
+    hybrid_result = hybrid_recommendation(movie, 500, content_data_soup, cosine_sim_soup, svd, links)
+    view_recommended_movies(hybrid_result)
+    #------------Hybrid recommender-----------#
     return
 
 if __name__ == '__main__':

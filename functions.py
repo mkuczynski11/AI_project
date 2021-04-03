@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+from pandas.core.frame import DataFrame
+from pandas.core.indexes.datetimes import date_range
+from surprise import SVD
 
 #returns top movies based only on user votes
 #x - DataFrame to analyze
@@ -107,10 +110,8 @@ def get_recommended_movies(cos_sim: np.ndarray, titles: pd.DataFrame, df:pd.Seri
 def view_recommended_movies(recommended: pd.DataFrame) -> None:     #to change 
     print('=' * 60)
     titles = recommended['title'].values.tolist()
-    print(f"Top recommended movies for {titles[0]}:")
-
-    for i in range(1, len(titles)):
-        print(f'{i}. {titles[i]}')
+    for i in range(0, len(titles)):
+        print(f'{i+1}. {titles[i]}')
 
     print('=' * 60)
 
@@ -140,3 +141,12 @@ def exists_file(file_name: str) -> bool:
             f.close()
 
         return exists
+
+#returns movie recommendation for specified user based on provided movie title
+def hybrid_recommendation(title:str, userId: int, df:DataFrame, cosine_sim:np.ndarray, svd:SVD, links:pd.DataFrame) -> pd.DataFrame:
+    movies = get_popular_recomandation(title, df, cosine_sim)
+    movieId = df[(df['title'] == title)]['id']
+    movieId = int(links[(links['tmdbId'] == int(movieId))]['movieId'])
+    movies['est'] = movies['id'].apply(lambda x: svd.predict(userId, movieId).est)
+    movies = movies.sort_values('est', ascending=False)
+    return movies
