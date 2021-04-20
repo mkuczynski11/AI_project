@@ -2,14 +2,17 @@
  This repository devoted to Artificial Intelligence project durign 4th semester at University of Technology in Gdańsk.  
  The purpose of this project is to create movie recommending system.
 ## Requirements
- There are several requirements:
- ### Imports
-  * `pip install pandas`
-  * `pip install numpy`
-  * `pip install ntlk`
-  * `pip install -U scikit-learn`
- ### Python
-  We recommend using `python 3.9.2` version, as we created this repository using this version
+### Packages
+ Packages we are using in this project are listed below
+ * `numpy`
+ * `pandas`
+ * `nltk`
+ * `sklearn`
+ * `surprise`
+ Although for usage comfort they are also in `requirements.txt` file, so installing all packages is simplified to:
+  `pip install -r requirements.txt`
+### Python
+  We recommend using `python 3.9.2`, as we created this repository using this version
 ## Description
 https://www.kaggle.com/rounakbanik/movie-recommender-systems#Movies-Recommender-System
 ## CSV links

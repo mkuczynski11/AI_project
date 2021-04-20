@@ -15,7 +15,7 @@ from functions import (get_recommended_movies, hybrid_recommendation, top_movies
                        top_movies_by_year, top_movies_general,
                        view_recommended_movies, weighted_rating,
                        discard_keywords, get_director, get_recommendation,
-                       get_popular_recomandation, get_actors)
+                       get_popular_recomandation, get_actors, save_to_file, load_from_file, exists_file)
 
 def main():
     #----------------Data prep----------------#
@@ -55,6 +55,7 @@ def main():
     #content_data DataFrame prep
     # content_data_soup:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
     content_data_soup:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']]
+    content_data_soup = top_movies_general(content_data_soup, 0.7)
     content_data_soup['id'] = csv_data['id']
     content_data_soup['id'] = content_data_soup['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
     
@@ -72,21 +73,21 @@ def main():
     content_data_soup['keywords'] = content_data_soup['keywords'].apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
 
     print("Recommender: keywords discarding")
-    #Discarding unwanted keywords(with few occurences)
+    # Discarding unwanted keywords(with few occurences)
     keywords_frequency:object = content_data_soup.apply(lambda x: pd.Series(x['keywords'], dtype="object"), axis=1).stack().reset_index(level=1, drop=True)
     keywords_frequency.name = 'keyword'
     keywords_frequency = keywords_frequency.value_counts()
     keywords_frequency = keywords_frequency[keywords_frequency > 1]
     
     print("Recommender: keywords refactoring")
-    #Refactoring keywords with stemmer(converts various keywords into one)
+    # Refactoring keywords with stemmer(converts various keywords into one)
     stemmer = SnowballStemmer('english')
     content_data_soup['keywords'] = content_data_soup['keywords'].apply(discard_keywords, args=(keywords_frequency,))
     content_data_soup['keywords'] = content_data_soup['keywords'].apply(lambda x: [stemmer.stem(i) for i in x])
     content_data_soup['keywords'] = content_data_soup['keywords'].apply(lambda x: [str.lower(i.replace(" ", "")) for i in x])
 
     print("Recommender: cosine similarity computing(soup)")
-    #Cosine similarity computing
+    # Cosine similarity computing
     content_data_soup['soup'] = content_data_soup['crew'] + content_data_soup['cast'] + content_data_soup['keywords'] + content_data_soup['genres']
     content_data_soup['soup'] = content_data_soup['soup'].apply(lambda x: ' '.join(x))
     count = CountVectorizer(analyzer="word", ngram_range=(1,2), min_df=0, stop_words="english")
@@ -97,6 +98,9 @@ def main():
     # Geting new DataFrame with specific columns and creating additional column
     # with tagline and overview combined
     content_data_desc = csv_data[['genres','release_date','title', 'vote_count', 'vote_average', 'overview', 'tagline']]
+
+    # Trimming dataset so there will be only best 70% movies from this dataset
+    content_data_desc = top_movies_general(content_data_desc, 0.7)
     content_data_desc['tagline'] = content_data_desc['tagline'].fillna('')
     content_data_desc['description'] = content_data_desc['tagline'] + content_data_desc['overview']
     content_data_desc['description'] = content_data_desc['description'].fillna('')
@@ -130,7 +134,6 @@ def main():
     view_recommended_movies(recommended)
     #----------------Content description based----------------#
 
-
     #--------------------Content soup based-------------------#
     print("Recommender: content_recommending preping for " + movie)
     content_recommend = get_recommendation(movie, content_data_soup, cosine_sim_soup).head(15)
@@ -139,8 +142,6 @@ def main():
     popular_content_recommend = get_popular_recomandation(movie, content_data_soup, cosine_sim_soup)
     view_recommended_movies(popular_content_recommend)
     #--------------------Content soup based-------------------#
-
-
 
     #------------Colaborative based-----------#
     reader = Reader()

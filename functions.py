@@ -88,7 +88,7 @@ def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.
 #cosine_sim - computed already cosine similarity matrix
 def get_popular_recomandation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame: # to merge
     titles = get_recommendation(title, df, cosine_sim).head(100)
-    top_movies = top_movies_general(titles, 0.1)
+    top_movies = top_movies_general(titles, 0.5)
     return top_movies
 
 # Returns DataFrame containing 100 most similiar movies, ordered by their rating
@@ -115,11 +115,12 @@ def view_recommended_movies(recommended: pd.DataFrame) -> None:     #to change
 
     print('=' * 60)
 
-def save_to_file(df: pd.DataFrame, file_name:str, overwrite: bool=True) -> None:
+def save_to_file(df: np.ndarray, file_name:str, overwrite: bool=True) -> None:
     exists = exists_file(file_name)
 
     if not exists or overwrite:
-        df.to_csv(file_name, encoding='utf-8', index=False)
+        # df.to_csv(file_name, encoding='utf-8', index=False)
+        np.savetxt(f"{file_name}.csv", df, delimiter=',')
 
 def load_from_file(file_name: str) -> pd.DataFrame:
     df = None
@@ -135,11 +136,10 @@ def exists_file(file_name: str) -> bool:
         try:
             f = open(file_name)
             exists = True
+            f.close()
         except IOError:
             pass
-        finally:
-            f.close()
-
+            
         return exists
 
 #returns movie recommendation for specified user based on provided movie title
