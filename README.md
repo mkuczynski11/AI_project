@@ -9,6 +9,7 @@
  * `nltk`
  * `sklearn`
  * `surprise`
+---
  Although for usage comfort they are also in `requirements.txt` file, so installing all packages is simplified to:
   `pip install -r requirements.txt`
 ### Python
