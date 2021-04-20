@@ -11,7 +11,7 @@
  * `surprise`
 
 
- Although for usage comfort they are also in `requirements.txt` file, so installing all packages is simplified to:
+ Although for usage comfort they are also in `requirements.txt` file, so installing all packages is simplified to:  
  `pip install -r requirements.txt`
 ### Python
   We recommend using `python 3.9.2`, as we created this repository using this version
