@@ -2,20 +2,23 @@ from ast import literal_eval
 
 import numpy as np
 import pandas as pd
+from InquirerPy import inquirer
 from nltk.stem.snowball import SnowballStemmer
 from pandas.io.parsers import read_csv
-from sklearn.feature_extraction.text import (CountVectorizer, TfidfVectorizer,)
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
-from surprise import Reader, Dataset, SVD
+from surprise import SVD, Dataset, Reader
 from surprise.model_selection import cross_validate
 
 pd.options.mode.chained_assignment = None  # default='warn' <- disabling warning message
 
-from functions import (get_recommended_movies, hybrid_recommendation, top_movies_by_genre,
+from functions import (discard_keywords, exists_file, get_actors, get_director,
+                       get_popular_recomandation, get_recommendation,
+                       get_recommended_movies, hybrid_recommendation,
+                       load_from_file, save_to_file, top_movies_by_genre,
                        top_movies_by_year, top_movies_general,
-                       view_recommended_movies, weighted_rating,
-                       discard_keywords, get_director, get_recommendation,
-                       get_popular_recomandation, get_actors, save_to_file, load_from_file, exists_file)
+                       view_recommended_movies, weighted_rating)
+
 
 def main():
     #----------------Data prep----------------#
@@ -161,6 +164,37 @@ def main():
     hybrid_result = hybrid_recommendation(movie, 500, content_data_soup, cosine_sim_soup, svd, links)
     view_recommended_movies(hybrid_result)
     #------------Hybrid recommender-----------#
+
+    #------------CLI--------------------------#
+    print('Welcome to the movies recommender system, please choose one of the following:')
+
+    recommendation_type = 'hybrid'
+
+    while True:
+        choice = inquirer.select(
+            message='Actions: ', 
+            choices=['Search for the movie',
+                     'Choose recommendation type',
+                     'Exit application']
+        ).execute()
+
+        if choice == 'Exit application':
+            print('Thank you for the effort')
+            break
+
+        if choice == 'Search for the movie':
+            movie_title = inquirer.text(message='Please, enter movie name:').execute()
+
+            print(f"It seems that you are looking for recommendations for {movie_title}")
+
+        if choice == 'Choose recommendation type':
+            recommendation_type = inquirer.select(
+                message='Please, choose recommendation type',
+                choices=['Hybrid', 'Content description based',
+                          'Colaborative']
+            ).execute()
+    #------------CLI--------------------------#
+
     return
 
 if __name__ == '__main__':
