@@ -8,7 +8,7 @@ from pandas.core.frame import DataFrame
 from pandas.io.parsers import read_csv
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
-from surprise import SVD, Dataset, Reader
+from surprise import SVD, Dataset, Reader, KNNWithMeans
 from surprise.model_selection import cross_validate
 
 pd.options.mode.chained_assignment = None  # default='warn' <- disabling warning message
@@ -17,7 +17,7 @@ from functions import (discard_keywords, exists_file, get_actors, get_director,
                        get_popular_recomandation, get_recommendation,
                        get_recommended_movies, hybrid_recommendation,
                        load_from_file, save_to_file, top_movies_by_genre,
-                       top_movies_by_year, top_movies_general,
+                       top_movies_by_year, top_movies_general, top_recommended_movies_for_user,
                        view_recommended_movies, weighted_rating)
 
 
@@ -149,8 +149,8 @@ def main():
 
     #------------User preparation-----------#
     ratings:DataFrame = read_csv("ratings_small.csv")
-    users_count = 2
-    movies_to_rate_count = 3
+    users_count = 1
+    movies_to_rate_count = 10
 
     for i in range(users_count):
         print(f"Wybierz {movies_to_rate_count} filmy dla użytkownika {i+1}")
@@ -177,11 +177,12 @@ def main():
     #------------Colaborative based-----------#
     reader = Reader()
     data = Dataset.load_from_df(ratings[['userId', 'movieId', 'rating']], reader)
-    svd = SVD()
+    algo = SVD()
+    # algo = KNNWithMeans()
     print("Recommender: evaluating 'RMSE' and 'MAE' measures for SVD")
-    cross_validate(svd, data, measures=['RMSE', 'MAE'], cv=5)
+    cross_validate(algo, data, measures=['RMSE', 'MAE'], cv=5)
     trainset = data.build_full_trainset()
-    svd.fit(trainset)
+    algo.fit(trainset)
     #------------Colaborative based-----------#
 
     # #------------Hybrid recommender-----------#
@@ -203,13 +204,23 @@ def main():
             message='Actions: ', 
             choices=['Search for the movie',
                      'Choose recommendation type',
-                     'Exit application',
-                     'Print top 1 percent movies']
+                     'Print top 1 percent movies',
+                     'Top For User',
+                     'Exit application']
         ).execute()
 
         if choice == 'Exit application':
             print('Thank you for the effort')
             break
+
+        if choice == 'Top For User':
+            user_choice = inquirer.select(
+                message='Select user', 
+                choices=[i+1001 for i in range(users_count)]
+            ).execute()
+            movies = top_recommended_movies_for_user(user_choice, content_data_soup, algo, links).head(10)
+            print(movies[['title', 'est']])
+
 
         if choice == 'Print top 1 percent movies':
             view_recommended_movies(top_movies_general(content_data_soup, 0.01))
@@ -229,7 +240,7 @@ def main():
                 continue
             elif(recommendation_type == 'Hybrid'):
                 result = hybrid_recommendation(movie_title, user_choice,
-                content_data_soup, cosine_sim_soup, svd, links)
+                content_data_soup, cosine_sim_soup, algo, links)
             elif(recommendation_type == 'Content description based'):
                 result = get_popular_recomandation(movie_title, content_data_desc, cosine_sim_desc)
             elif(recommendation_type == 'Colaborative'):
@@ -238,15 +249,24 @@ def main():
             print(f"Your recommendations for {movie_title}")
             # view_recommended_movies(result)
             print(result[['title','est']])
-            # movie_number = inquirer.select(
-            #     message='Please, select number of the movie you want to rate',
-            #     choices=[i+1 for i in range(len(result))]
-            # ).execute()
-            # rating = inquirer.select(
-            #     message='Please rate the movie',
-            #     choices=[i for i in range(1,6)]
-            # ).execute()
+            chosen_movie = inquirer.select(
+                message='Please, select the movie you want to rate',
+                choices=[x for x in result['title']]
+            ).execute()
+            rating = inquirer.select(
+                message='Please rate the movie',
+                choices=[i for i in range(1,6)]
+            ).execute()
 
+            tmp_id = content_data_soup[(content_data_soup['title'] == chosen_movie)]['id']
+            tmp_id = int(links[(links['tmdbId'] == int(tmp_id))]['movieId'])
+            d = {'userId' : [user_id], 'movieId' : [tmp_id], 'rating' : [rating], "timestamp" : [-1]}
+            tmp_df = pd.DataFrame(data=d)
+            ratings = ratings.append(tmp_df, ignore_index=True)
+
+            data = Dataset.load_from_df(ratings[['userId', 'movieId', 'rating']], reader)
+            trainset = data.build_full_trainset()
+            algo.fit(trainset)
 
 
         if choice == 'Choose recommendation type':
