@@ -51,14 +51,14 @@ def main():
 
     print("Recommender: links preping")
     #links DataFrame prep
-    links = pd.read_csv('links.csv')
+    links = pd.read_csv('links_small.csv')
     links['tmdbId'] = links[links['tmdbId'].notnull()]['tmdbId'].astype('int')
 
     print("Recommender: content_data preping")
     #content_data DataFrame prep
     # content_data_soup:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']].join(csv_data['id'])
     content_data_soup:pd.DataFrame = movies_data[['genres','release_date','title', 'vote_count', 'vote_average']]
-    content_data_soup = top_movies_general(content_data_soup, 0.7)
+    # content_data_soup = top_movies_general(content_data_soup, 0.7)
     content_data_soup['id'] = csv_data['id']
     content_data_soup['id'] = content_data_soup['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
     
@@ -131,7 +131,7 @@ def main():
     #----------------Raw data recommending----------------#
 
     #----------------Content description based----------------#
-    movie = 'Avatar'
+    movie = 'The Matrix'
     print("Recommender: recommending description based for " + movie)
     recommended = get_popular_recomandation(movie, content_data_desc, cosine_sim_desc)
     view_recommended_movies(recommended)
@@ -160,9 +160,9 @@ def main():
     #------------Hybrid recommender-----------#
     print("Recommender: Hybrid recommendation for " + movie)
     hybrid_result = hybrid_recommendation(movie, 1, content_data_soup, cosine_sim_soup, svd, links)
-    view_recommended_movies(hybrid_result)
+    print(hybrid_result[['title', 'est']])
     hybrid_result = hybrid_recommendation(movie, 500, content_data_soup, cosine_sim_soup, svd, links)
-    view_recommended_movies(hybrid_result)
+    print(hybrid_result[['title', 'est']])
     #------------Hybrid recommender-----------#
 
     #------------CLI--------------------------#

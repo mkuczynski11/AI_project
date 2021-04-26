@@ -88,7 +88,7 @@ def get_recommendation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.
 #cosine_sim - computed already cosine similarity matrix
 def get_popular_recomandation(title:str, df:pd.DataFrame, cosine_sim:np.ndarray) -> pd.DataFrame: # to merge
     titles = get_recommendation(title, df, cosine_sim).head(100)
-    top_movies = top_movies_general(titles, 0.5)
+    top_movies = top_movies_general(titles, 0.1)
     return top_movies
 
 # Returns DataFrame containing 100 most similiar movies, ordered by their rating
@@ -145,8 +145,10 @@ def exists_file(file_name: str) -> bool:
 #returns movie recommendation for specified user based on provided movie title
 def hybrid_recommendation(title:str, userId: int, df:DataFrame, cosine_sim:np.ndarray, svd:SVD, links:pd.DataFrame) -> pd.DataFrame:
     movies = get_popular_recomandation(title, df, cosine_sim)
-    movieId = df[(df['title'] == title)]['id']
-    movieId = int(links[(links['tmdbId'] == int(movieId))]['movieId'])
-    movies['est'] = movies['id'].apply(lambda x: svd.predict(userId, movieId).est)
+    for i in range(len(movies['id'])):
+        movies['id'].iloc[i] = links[(links['tmdbId'] == movies['id'].iloc[i])]['movieId']
+    movies['est'] = movies['id'].apply(lambda x: 0)
+    for i in range(len(movies['id'])):
+        movies['est'].iloc[i] = svd.predict(userId, movies['id'].iloc[i]).est
     movies = movies.sort_values('est', ascending=False)
     return movies
