@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from InquirerPy import inquirer
 from nltk.stem.snowball import SnowballStemmer
+from pandas.core.frame import DataFrame
 from pandas.io.parsers import read_csv
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
@@ -130,25 +131,51 @@ def main():
     # print(top_by_year)
     #----------------Raw data recommending----------------#
 
-    #----------------Content description based----------------#
-    movie = 'The Matrix'
-    print("Recommender: recommending description based for " + movie)
-    recommended = get_popular_recomandation(movie, content_data_desc, cosine_sim_desc)
-    view_recommended_movies(recommended)
-    #----------------Content description based----------------#
+    # #----------------Content description based----------------#
+    # movie = 'The Matrix'
+    # print("Recommender: recommending description based for " + movie)
+    # recommended = get_popular_recomandation(movie, content_data_desc, cosine_sim_desc)
+    # view_recommended_movies(recommended)
+    # #----------------Content description based----------------#
 
-    #--------------------Content soup based-------------------#
-    print("Recommender: content_recommending preping for " + movie)
-    content_recommend = get_recommendation(movie, content_data_soup, cosine_sim_soup).head(15)
-    view_recommended_movies(content_recommend)
-    print("Recommender: popular_content_recommending preping for " + movie)
-    popular_content_recommend = get_popular_recomandation(movie, content_data_soup, cosine_sim_soup)
-    view_recommended_movies(popular_content_recommend)
-    #--------------------Content soup based-------------------#
+    # #--------------------Content soup based-------------------#
+    # print("Recommender: content_recommending preping for " + movie)
+    # content_recommend = get_recommendation(movie, content_data_soup, cosine_sim_soup).head(15)
+    # view_recommended_movies(content_recommend)
+    # print("Recommender: popular_content_recommending preping for " + movie)
+    # popular_content_recommend = get_popular_recomandation(movie, content_data_soup, cosine_sim_soup)
+    # view_recommended_movies(popular_content_recommend)
+    # #--------------------Content soup based-------------------#
+
+    #------------User preparation-----------#
+    ratings:DataFrame = read_csv("ratings_small.csv")
+    users_count = 2
+    movies_to_rate_count = 3
+
+    for i in range(users_count):
+        print(f"Wybierz {movies_to_rate_count} filmy dla użytkownika {i+1}")
+        user_id = 1000 + i+1
+        for i in range(movies_to_rate_count):
+            user_choice = inquirer.select(
+                message="Wybierz film",
+                choices=top_movies_general(content_data_soup,0.05)['title']
+            ).execute()
+
+            user_rating = inquirer.select(
+                message="Podaj ocene filmu",
+                choices=[i for i in range(1,6)]
+            ).execute()
+
+            tmp_id = content_data_soup[(content_data_soup['title'] == user_choice)]['id']
+            tmp_id = int(links[(links['tmdbId'] == int(tmp_id))]['movieId'])
+            d = {'userId' : [user_id], 'movieId' : [tmp_id], 'rating' : [user_rating], "timestamp" : [-1]}
+            tmp_df = pd.DataFrame(data=d)
+            ratings = ratings.append(tmp_df, ignore_index=True)
+
+    #------------User preparation-----------#
 
     #------------Colaborative based-----------#
     reader = Reader()
-    ratings = read_csv("ratings_small.csv")
     data = Dataset.load_from_df(ratings[['userId', 'movieId', 'rating']], reader)
     svd = SVD()
     print("Recommender: evaluating 'RMSE' and 'MAE' measures for SVD")
@@ -157,35 +184,70 @@ def main():
     svd.fit(trainset)
     #------------Colaborative based-----------#
 
-    #------------Hybrid recommender-----------#
-    print("Recommender: Hybrid recommendation for " + movie)
-    hybrid_result = hybrid_recommendation(movie, 1, content_data_soup, cosine_sim_soup, svd, links)
-    print(hybrid_result[['title', 'est']])
-    hybrid_result = hybrid_recommendation(movie, 500, content_data_soup, cosine_sim_soup, svd, links)
-    print(hybrid_result[['title', 'est']])
-    #------------Hybrid recommender-----------#
+    # #------------Hybrid recommender-----------#
+    # print("Recommender: Hybrid recommendation for " + movie)
+    # hybrid_result = hybrid_recommendation(movie, 1, content_data_soup, cosine_sim_soup, svd, links)
+    # print(hybrid_result[['title', 'est']])
+    # hybrid_result = hybrid_recommendation(movie, 500, content_data_soup, cosine_sim_soup, svd, links)
+    # print(hybrid_result[['title', 'est']])
+    # #------------Hybrid recommender-----------#
 
     #------------CLI--------------------------#
     print('Welcome to the movies recommender system, please choose one of the following:')
 
-    recommendation_type = 'hybrid'
+    recommendation_type = 'Hybrid'
 
     while True:
+
         choice = inquirer.select(
             message='Actions: ', 
             choices=['Search for the movie',
                      'Choose recommendation type',
-                     'Exit application']
+                     'Exit application',
+                     'Print top 1 percent movies']
         ).execute()
 
         if choice == 'Exit application':
             print('Thank you for the effort')
             break
 
+        if choice == 'Print top 1 percent movies':
+            view_recommended_movies(top_movies_general(content_data_soup, 0.01))
+
         if choice == 'Search for the movie':
+            user_choice = inquirer.select(
+                message='Select user', 
+                choices=[i+1001 for i in range(users_count)]
+            ).execute()
+
             movie_title = inquirer.text(message='Please, enter movie name:').execute()
 
             print(f"It seems that you are looking for recommendations for {movie_title}")
+            tmp_title = movies_data[(movies_data['title'] == movie_title)]
+            if(tmp_title.empty):
+                print(f"There is no movie named {movie_title}")
+                continue
+            elif(recommendation_type == 'Hybrid'):
+                result = hybrid_recommendation(movie_title, user_choice,
+                content_data_soup, cosine_sim_soup, svd, links)
+            elif(recommendation_type == 'Content description based'):
+                result = get_popular_recomandation(movie_title, content_data_desc, cosine_sim_desc)
+            elif(recommendation_type == 'Colaborative'):
+                print("Not yet implemented")
+
+            print(f"Your recommendations for {movie_title}")
+            # view_recommended_movies(result)
+            print(result[['title','est']])
+            # movie_number = inquirer.select(
+            #     message='Please, select number of the movie you want to rate',
+            #     choices=[i+1 for i in range(len(result))]
+            # ).execute()
+            # rating = inquirer.select(
+            #     message='Please rate the movie',
+            #     choices=[i for i in range(1,6)]
+            # ).execute()
+
+
 
         if choice == 'Choose recommendation type':
             recommendation_type = inquirer.select(
