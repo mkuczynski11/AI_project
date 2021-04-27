@@ -157,6 +157,7 @@ def top_recommended_movies_for_user(userId:int, df:DataFrame, svd:SVD, links:Dat
     movies = df.copy()
     for i in range(len(movies['id'])):
         movies['id'].iloc[i] = links[(links['tmdbId'] == movies['id'].iloc[i])]['movieId']
+    
     movies['est'] = movies['id'].apply(lambda x: 0)
     for i in range(len(movies['id'])):
         movies['est'].iloc[i] = svd.predict(userId, movies['id'].iloc[i]).est
