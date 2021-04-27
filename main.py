@@ -150,9 +150,18 @@ def main():
     # view_recommended_movies(popular_content_recommend)
     #--------------------Content soup based-------------------#
 
-    content_data = content_data_soup
-    cosine_sim = cosine_sim_soup
-
+    content_data = inquirer.select(
+                message="Wybierz metode porównania",
+                choices=['Description',
+                'Soup']
+            ).execute()
+    if(content_data == "Description"):
+        content_data = content_data_desc
+        cosine_sim = cosine_sim_desc
+    elif(content_data == "Soup"):
+        content_data = content_data_soup
+        cosine_sim = cosine_sim_soup
+        
     #------------User preparation-----------#
     ratings:DataFrame = read_csv("ratings_small.csv")
     users_count = 1
