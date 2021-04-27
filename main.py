@@ -53,7 +53,7 @@ def main():
 
     print("Recommender: links preping")
     #links DataFrame prep
-    links = pd.read_csv('links_small.csv')
+    links = pd.read_csv('links.csv')
     links['tmdbId'] = links[links['tmdbId'].notnull()]['tmdbId'].astype('int')
 
     print("Recommender: content_data preping")
@@ -99,12 +99,10 @@ def main():
     count_matrix = count.fit_transform(content_data_soup['soup'])
     cosine_sim_soup = cosine_similarity(count_matrix, count_matrix)
 
-    view_recommended_movies(get_recommendation("Star Wars", content_data_soup, cosine_sim_soup).head(10))
-
     print("Recommender: description prep")
     # Geting new DataFrame with specific columns and creating additional column
     # with tagline and overview combined
-    content_data_desc = csv_data[['genres','release_date','title', 'vote_count', 'vote_average', 'overview', 'tagline']]
+    content_data_desc = csv_data[['id','genres','release_date','title', 'vote_count', 'vote_average', 'overview', 'tagline']]
 
     # Trimming dataset so there will be only best 70% movies from this dataset
     content_data_desc = top_movies_general(content_data_desc, 0.7)
@@ -112,7 +110,6 @@ def main():
     content_data_desc['description'] = content_data_desc['tagline'] + content_data_desc['overview']
     content_data_desc['description'] = content_data_desc['description'].fillna('')
     content_data_desc = content_data_desc.reset_index()
-    content_data_desc['id'] = csv_data['id']
     content_data_desc['id'] = content_data_desc['id'].apply(lambda x: x if '-' not in x else -1).astype('int')
 
     print("Recommender: cosine similarity computing(desc)")
@@ -153,6 +150,9 @@ def main():
     # view_recommended_movies(popular_content_recommend)
     #--------------------Content soup based-------------------#
 
+    content_data = content_data_soup
+    cosine_sim = cosine_sim_soup
+
     #------------User preparation-----------#
     ratings:DataFrame = read_csv("ratings_small.csv")
     users_count = 1
@@ -164,7 +164,7 @@ def main():
         for i in range(movies_to_rate_count):
             user_choice = inquirer.select(
                 message="Wybierz film",
-                choices=top_movies_general(content_data_soup,0.05)['title']
+                choices=top_movies_general(content_data,0.05)['title']
             ).execute()
 
             user_rating = inquirer.select(
@@ -172,7 +172,7 @@ def main():
                 choices=[i for i in range(1,6)]
             ).execute()
 
-            tmp_id = content_data_soup[(content_data_soup['title'] == user_choice)]['id']
+            tmp_id = content_data[(content_data['title'] == user_choice)]['id']
             tmp_id = int(links[(links['tmdbId'] == int(tmp_id))]['movieId'])
             d = {'userId' : [user_id], 'movieId' : [tmp_id], 'rating' : [user_rating], "timestamp" : [-1]}
             tmp_df = pd.DataFrame(data=d)
@@ -203,7 +203,6 @@ def main():
     print('Welcome to the movies recommender system, please choose one of the following:')
 
     recommendation_type = 'Hybrid'
-    content_data = content_data_desc
 
     while True:
 
@@ -256,9 +255,9 @@ def main():
                 continue
             elif(recommendation_type == 'Hybrid'):
                 result = hybrid_recommendation(movie_title, user_choice,
-                content_data, cosine_sim_soup, algo, links)
+                content_data, cosine_sim, algo, links)
             elif(recommendation_type == 'Content based'):
-                result = get_popular_recomandation(movie_title, content_data, cosine_sim_desc)
+                result = get_popular_recomandation(movie_title, content_data, cosine_sim)
             elif(recommendation_type == 'Colaborative'):
                 print("Not yet implemented")
 
