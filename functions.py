@@ -115,33 +115,6 @@ def view_recommended_movies(recommended: pd.DataFrame) -> None:     #to change
 
     print('=' * 60)
 
-def save_to_file(df: np.ndarray, file_name:str, overwrite: bool=True) -> None:
-    exists = exists_file(file_name)
-
-    if not exists or overwrite:
-        # df.to_csv(file_name, encoding='utf-8', index=False)
-        np.savetxt(f"{file_name}.csv", df, delimiter=',')
-
-def load_from_file(file_name: str) -> pd.DataFrame:
-    df = None
-
-    if exists_file(file_name):
-        df = pd.read_csv(file_name)
-
-    return df
-
-def exists_file(file_name: str) -> bool:
-        exists = False
-
-        try:
-            f = open(file_name)
-            exists = True
-            f.close()
-        except IOError:
-            pass
-            
-        return exists
-
 #returns movie recommendation for specified user based on provided movie title
 def hybrid_recommendation(title:str, userId: int, df:DataFrame, cosine_sim:np.ndarray, svd:SVD, links:pd.DataFrame) -> pd.DataFrame:
     movies = get_popular_recomandation(title, df, cosine_sim)

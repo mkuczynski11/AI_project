@@ -1,23 +1,21 @@
 from ast import literal_eval
 
-import numpy as np
 import pandas as pd
 from InquirerPy import inquirer
 from nltk.stem.snowball import SnowballStemmer
 from pandas.core.frame import DataFrame
-from pandas.core.series import Series
 from pandas.io.parsers import read_csv
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
-from surprise import SVD, Dataset, Reader, KNNWithMeans
+from surprise import SVD, Dataset, Reader
 from surprise.model_selection import cross_validate
 
 pd.options.mode.chained_assignment = None  # default='warn' <- disabling warning message
 
-from functions import (discard_keywords, exists_file, get_actors, get_director,
+from functions import (discard_keywords, get_actors, get_director,
                        get_popular_recomandation, get_recommendation,
                        get_recommended_movies, hybrid_recommendation,
-                       load_from_file, save_to_file, top_movies_by_genre,
+                       top_movies_by_genre,
                        top_movies_by_year, top_movies_general, top_recommended_movies_for_user,
                        view_recommended_movies, weighted_rating)
 
