@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from pandas.core.frame import DataFrame
-from pandas.core.indexes.datetimes import date_range
 from surprise import SVD
 
 #returns top movies based only on user votes
