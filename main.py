@@ -220,7 +220,6 @@ def main():
             choices=['Search for the movie',
                      'Choose recommendation type',
                      'Print top 1 percent movies',
-                     'Top For User',
                      'Find movie',
                      'Exit application']
         ).execute()
@@ -235,16 +234,9 @@ def main():
             for i in range(len(content_data)):
                 if(movie_title in content_data['title'].iloc[i]):
                     titles.append(content_data['title'].iloc[i])
-            print(titles)
 
-        if choice == 'Top For User':
-            user_choice = inquirer.select(
-                message='Select user', 
-                choices=[i+1001 for i in range(users_count)]
-            ).execute()
-            movies = top_recommended_movies_for_user(user_choice, content_data, algo, links).head(10)
-            print(movies[['title', 'est']])
-
+            for id, title in enumerate(titles):
+                print(f'{id + 1}. {title}')
 
         if choice == 'Print top 1 percent movies':
             view_recommended_movies(top_movies_general(content_data, 0.01))
@@ -267,8 +259,6 @@ def main():
                 content_data, cosine_sim, algo, links)
             elif(recommendation_type == 'Content based'):
                 result = get_popular_recomandation(movie_title, content_data, cosine_sim)
-            elif(recommendation_type == 'Colaborative'):
-                print("Not yet implemented")
 
             print(f"Your recommendations for {movie_title}")
             # view_recommended_movies(result)
@@ -282,6 +272,8 @@ def main():
                 choices=[i for i in range(1,6)]
             ).execute()
 
+            print("? Computing...")
+
             tmp_id = content_data[(content_data['title'] == chosen_movie)]['id']
             tmp_id = int(links[(links['tmdbId'] == int(tmp_id))]['movieId'])
             d = {'userId' : [user_id], 'movieId' : [tmp_id], 'rating' : [rating], "timestamp" : [-1]}
@@ -292,12 +284,10 @@ def main():
             trainset = data.build_full_trainset()
             algo.fit(trainset)
 
-
         if choice == 'Choose recommendation type':
             recommendation_type = inquirer.select(
                 message='Please, choose recommendation type',
-                choices=['Hybrid', 'Content description based',
-                          'Colaborative']
+                choices=['Hybrid', 'Content description based']
             ).execute()
     #------------CLI--------------------------#
 
